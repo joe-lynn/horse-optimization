@@ -1,0 +1,44 @@
+# OS specific files
+.DS_Store # auto-generated OSX files
+[Tt]humbs.db # auto-generated Windows files
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Eclipse
+.project
+
+# Netbeans
+nbproject/
+nbbuild/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+.nb-gradle/
+
+# Java build stuff
+build/
+bin/
+dist/
+obj/
+target/
+out/
+tmp/
+
+
+
+### Default GitHub options for Java ###
+*.class
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+### End ###
