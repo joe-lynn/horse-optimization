@@ -10,26 +10,18 @@ public class RaceEntry {
     private int weight;
 //    private ME me;
     private int pp;
-    private int startPosition;
-    private int quarterPosition;
-    private int halfPosition;
-    private int strPosition;
-    private int finishPosition;
+    private PositionData positionData;
     private double odds;
     private String comments;
 
-    public RaceEntry(String trackCode, LocalDate date, int raceNum, RaceInfo raceInfo, int weight, int pp, int startPosition, int quarterPosition, int halfPosition, int strPosition, int finishPosition, double odds, String comments) {
+    public RaceEntry(String trackCode, LocalDate date, int raceNum, RaceInfo raceInfo, int weight, int pp, PositionData positionData, double odds, String comments) {
         this.trackCode = trackCode;
         this.date = date;
         this.raceNum = raceNum;
         this.raceInfo = raceInfo;
         this.weight = weight;
         this.pp = pp;
-        this.startPosition = startPosition;
-        this.quarterPosition = quarterPosition;
-        this.halfPosition = halfPosition;
-        this.strPosition = strPosition;
-        this.finishPosition = finishPosition;
+        this.positionData = positionData;
         this.odds = odds;
         this.comments = comments;
     }
@@ -58,24 +50,8 @@ public class RaceEntry {
         return pp;
     }
 
-    public int getStartPosition() {
-        return startPosition;
-    }
-
-    public int getQuarterPosition() {
-        return quarterPosition;
-    }
-
-    public int getHalfPosition() {
-        return halfPosition;
-    }
-
-    public int getStrPosition() {
-        return strPosition;
-    }
-
-    public int getFinishPosition() {
-        return finishPosition;
+    public PositionData getPositionData() {
+        return positionData;
     }
 
     public double getOdds() {

@@ -1,5 +1,6 @@
 package com.myorganization.app.models;
 
+import org.joda.time.LocalTime;
 import java.util.ArrayList;
 
 public class RaceInfo {
@@ -7,16 +8,16 @@ public class RaceInfo {
     private TrackWeather weather;
     private TrackTypes track;
     private TrackRecord trackRecord;
-    private ArrayList<Time> fractionalTimes;
-    private Time finalTime;
-    private ArrayList<Time> splitTimes;
+    private ArrayList<LocalTime> fractionalTimes;
+    private LocalTime finalTime;
+    private ArrayList<LocalTime> splitTimes;
     private int runUp;
     private String winningBreeder;
     private String winningOwner;
     private double totalPool;
 
-    RaceInfo(TrackWeather weather, TrackTypes track, TrackRecord trackRecord, ArrayList<Time> fractionalTimes,
-             Time finalTime, ArrayList<Time> splitTimes, int runUp, String winningBreeder,
+    RaceInfo(TrackWeather weather, TrackTypes track, TrackRecord trackRecord, ArrayList<LocalTime> fractionalTimes,
+             LocalTime finalTime, ArrayList<LocalTime> splitTimes, int runUp, String winningBreeder,
              String winningOwner, double totalPool) {
         this.weather = weather;
         this.track = track;
@@ -42,15 +43,15 @@ public class RaceInfo {
         return trackRecord;
     }
 
-    public ArrayList<Time> getFractionalTimes() {
+    public ArrayList<LocalTime> getFractionalTimes() {
         return fractionalTimes;
     }
 
-    public Time getFinalTime() {
+    public LocalTime getFinalTime() {
         return finalTime;
     }
 
-    public ArrayList<Time> getSplitTimes() {
+    public ArrayList<LocalTime> getSplitTimes() {
         return splitTimes;
     }
 

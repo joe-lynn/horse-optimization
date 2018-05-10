@@ -1,6 +1,31 @@
 package com.myorganization.app.models;
 
-public class TrackWeather {
-    public static final String CLOUDY = "Cloudy";
-    public static final String CLEAR = "Clear";
+import java.util.HashMap;
+import java.util.Map;
+
+public enum TrackWeather {
+
+    CLOUDY("Cloudy"), CLEAR("Clear");
+
+    private final String abbreviation;
+
+    private static final Map<String, TrackWeather> lookup = new HashMap<>();
+
+    static {
+        for (TrackWeather w : TrackWeather.values()) {
+            lookup.put(w.getAbbreviation(), w);
+        }
+    }
+
+    TrackWeather(String abbreviation) {
+        this.abbreviation = abbreviation;
+    }
+
+    public String getAbbreviation() {
+        return abbreviation;
+    }
+
+    public static TrackWeather get(String abbrev) {
+        return lookup.get(abbrev);
+    }
 }
