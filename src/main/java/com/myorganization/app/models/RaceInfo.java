@@ -2,23 +2,24 @@ package com.myorganization.app.models;
 
 import org.joda.time.LocalTime;
 import java.util.ArrayList;
+import java.util.List;
 
 public class RaceInfo {
 
     private TrackWeather weather;
     private TrackTypes track;
     private TrackRecord trackRecord;
-    private ArrayList<LocalTime> fractionalTimes;
+    private List<LocalTime> fractionalTimes;
     private LocalTime finalTime;
-    private ArrayList<LocalTime> splitTimes;
+    private List<LocalTime> splitTimes;
     private int runUp;
     private String winningBreeder;
     private String winningOwner;
     private double totalPool;
 
-    RaceInfo(TrackWeather weather, TrackTypes track, TrackRecord trackRecord, ArrayList<LocalTime> fractionalTimes,
-             LocalTime finalTime, ArrayList<LocalTime> splitTimes, int runUp, String winningBreeder,
-             String winningOwner, double totalPool) {
+    public RaceInfo(TrackWeather weather, TrackTypes track, TrackRecord trackRecord, List<LocalTime> fractionalTimes,
+                    LocalTime finalTime, List<LocalTime> splitTimes, int runUp, String winningBreeder,
+                    String winningOwner, double totalPool) {
         this.weather = weather;
         this.track = track;
         this.trackRecord = trackRecord;
@@ -43,7 +44,7 @@ public class RaceInfo {
         return trackRecord;
     }
 
-    public ArrayList<LocalTime> getFractionalTimes() {
+    public List<LocalTime> getFractionalTimes() {
         return fractionalTimes;
     }
 
@@ -51,7 +52,7 @@ public class RaceInfo {
         return finalTime;
     }
 
-    public ArrayList<LocalTime> getSplitTimes() {
+    public List<LocalTime> getSplitTimes() {
         return splitTimes;
     }
 
@@ -69,5 +70,20 @@ public class RaceInfo {
 
     public double getTotalPool() {
         return totalPool;
+    }
+
+    @Override
+    public String toString() {
+        return "RaceInfo{" +
+                "weather=" + weather +
+                ", track=" + track +
+                ", fractionalTimes=" + fractionalTimes +
+                ", finalTime=" + finalTime +
+                ", splitTimes=" + splitTimes +
+                ", runUp=" + runUp +
+                ", winningBreeder='" + winningBreeder + '\'' +
+                ", winningOwner='" + winningOwner + '\'' +
+                ", totalPool=" + totalPool +
+                '}';
     }
 }

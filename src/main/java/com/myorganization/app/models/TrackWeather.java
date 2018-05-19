@@ -5,7 +5,7 @@ import java.util.Map;
 
 public enum TrackWeather {
 
-    CLOUDY("Cloudy"), CLEAR("Clear");
+    CLOUDY("Cloudy"), CLEAR("Clear"), SHOWERY("Showery");
 
     private final String abbreviation;
 
