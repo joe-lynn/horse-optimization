@@ -110,14 +110,17 @@ public class PositionData {
 
     @Override
     public String toString() {
+        String threeQuarter = "";
+        if (hasThreeQuarter) {
+            threeQuarter = " - " + threeQuarterPosition;
+        }
         return "PositionData{" +
                 startPosition +
                 " - " + quarterPosition +
                 " - " + halfPosition +
                 " - " + strPosition +
-                " (-) " + threeQuarterPosition +
+                threeQuarter +
                 " - " + finishPosition +
-                " - " + hasThreeQuarter +
                 '}';
     }
 }

@@ -40,6 +40,7 @@ public class RaceEntry {
                 ", pgm=" + pgm +
                 ", jockey=" + jockey +
                 ", raceNum=" + raceNum +
+                ", raceInfo=" + raceInfo +
                 ", weight=" + weight +
                 ", me='" + me + '\'' +
                 ", pp=" + pp +

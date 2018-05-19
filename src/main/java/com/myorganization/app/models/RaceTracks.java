@@ -10,6 +10,8 @@ public class RaceTracks {
 
     static {
         tracks.put("AQE", "Aqueduct");
+        tracks.put("SA", "Santa Anita Park");
+        tracks.put("BEL", "Belmont Park");
     }
 
     public static String getTrackCode(String track) {

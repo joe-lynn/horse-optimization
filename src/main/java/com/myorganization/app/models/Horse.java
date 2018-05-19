@@ -24,6 +24,7 @@ public class Horse {
     public String toString() {
         return "Horse{" +
                 "name='" + name + '\'' +
+                ", raceEntries=" + raceEntries +
                 '}';
     }
 }

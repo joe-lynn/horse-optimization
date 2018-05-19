@@ -27,7 +27,7 @@ import static java.util.Arrays.asList;
 public final class Main {
     private static final Logger Log = LogManager.getLogger("Main");
 
-    private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) \\d+(\\w{2,3})\\d+)|([-]+)) (\\d{1,2}[A]?) ([a-zA-Z'. ]+)\\(([a-zA-Z, .]+)\\) (\\d{2,3})\\S?\\s+((?:[L]{1}[ ]?[bf]{1,2})|(?:[L]{1})) (\\d{1,2}) (\\d{1,2}) ([-0-9\\/A-Za-z ]*) (\\d*\\.?\\d*)\\*? (.+)";
+    private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) \\d+(\\w{2,3})\\d+)|([-]+)) (\\d{1,2}[A]?) ([-a-zA-Z'. ]+)\\(([a-zA-Z, .]+)\\) (\\d{2,3})\\S?\\s+((?:[L]?[ ]?[bf]{1,2})|[L]|[-]) (\\d{1,2}|[-]) (\\d{1,2}) ([-0-9\\/A-Za-z ]*) (\\d*\\.?\\d*)\\*? (.+)";
     private static final Pattern pattern = new Pattern(dataRegex, Pattern.MULTILINE);
 
     private static final String fractFinalRegex = ": (\\d*\\.?\\d*) (\\d*\\.?\\d*) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) [a-zA-Z :]*((?:[0-9]+:)?[0-9]{2}.[0-9]{2})";
@@ -39,12 +39,12 @@ public final class Main {
     private static final String runUpRegex = ": (\\d+)";
     private static final Pattern runUpPattern = new Pattern(runUpRegex, Pattern.MULTILINE);
 
-    private static final String trackRecordRegex = "([a-zA-Z ]*) Track Record: \\(([a-zA-Z \\(\\)]+) - ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) - (.+)\\)";
+    private static final String trackRecordRegex = "([a-zA-Z ]*) Track Record: \\(([a-zA-Z' \\(\\)]+) - ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) - (.+)\\)";
     private static final Pattern trackRecordPattern = new Pattern(trackRecordRegex, Pattern.MULTILINE);
 
     public static void main(String[] args) throws IOException {
 
-        try (PDDocument document = PDDocument.load(new File("old_test_dcrypt.pdf"))) { // old_test_dcrypt.pdf
+        try (PDDocument document = PDDocument.load(new File("santina.pdf"))) { // old_test_dcrypt.pdf
             PDFTextStripper tStripper = new PDFTextStripper();
             String pdfFileInText = tStripper.getText(document);
 
@@ -71,13 +71,13 @@ public final class Main {
             LocalTime fractTime3 = null;
             LocalTime finalTime = null;
 
+            ArrayList<LocalTime> splitTimes = new ArrayList<>();
+
             TrackWeather weatherCondition = null;
             TrackTypes trackCondition = null;
             TrackRecord trackRecord = null;
 
             int runUp = -1;
-
-            int startPosition = -1;
 
             for (int lineIndex = 0; lineIndex < lines.length; lineIndex++) { // Parse the PDF line by line
                 String line = lines[lineIndex];
@@ -97,7 +97,7 @@ public final class Main {
                     // TODO: Use track length to determine how many fractional times there should be: https://www.equibase.com/newfan/fractional_times.cfm
                     List<LocalTime> fractTimes = asList(fractTime1, fractTime2, fractTime3);
 
-                    RaceInfo raceInfo = new RaceInfo(weatherCondition, trackCondition, trackRecord, fractTimes, finalTime, null, runUp, "", "", 0f);
+                    RaceInfo raceInfo = new RaceInfo(weatherCondition, trackCondition, trackRecord, fractTimes, finalTime, splitTimes, runUp, "", "", 0f);
                     Log.debug(raceInfo);
                     Log.debug(trackRecord);
 
@@ -111,12 +111,18 @@ public final class Main {
                             String neverRacedFlag = dataMatcher.group(3);
 
                             String pgm = dataMatcher.group(4);
-                            String horseName = dataMatcher.group(5);
+                            String horseName = dataMatcher.group(5).trim();
                             String jockeyName = dataMatcher.group(6);
                             int weight = Integer.parseInt(dataMatcher.group(7));
                             String me = dataMatcher.group(8);
-                            int pp = Integer.parseInt(dataMatcher.group(9));
-                            startPosition = Integer.parseInt(dataMatcher.group(10));
+                            int pp = 0;
+                            if (!dataMatcher.group(9).contains("-")) {
+                                pp = Integer.parseInt(dataMatcher.group(9));
+                            }
+                            int startPosition = 0;
+                            if (!dataMatcher.group(10).contains("-")) {
+                                startPosition = Integer.parseInt(dataMatcher.group(10));
+                            }
                             String rawPositionDataString = dataMatcher.group(11);
                             double odds = Double.parseDouble(dataMatcher.group(12));
                             String comments = dataMatcher.group(13);
@@ -128,9 +134,12 @@ public final class Main {
                             Log.debug(newRaceEntry);
 
                             if (horseHashMap.containsKey(horseName)) { // If we already created this Horse
-
+                                horseHashMap.get(horseName).addRaceEntry(newRaceEntry);
                             } else { // Otherwise, create a new Horse and store in horseHashMap
-//                                Horse newHorse = new Horse();
+                                // Create new Horse, add this entry to record, and then store horse for future
+                                Horse newHorse = new Horse(horseName);
+                                newHorse.addRaceEntry(newRaceEntry);
+                                horseHashMap.put(horseName, newHorse);
                             }
                         } else {
                             Log.error("Error: Null dataMatcher for horse data row");
@@ -217,12 +226,27 @@ public final class Main {
                     } else {
                         Log.error("Failed to match Track Record/Length for line: " + line);
                     }
+                } else if (StringUtils.containsIgnoreCase(line, "Split Times")) {
+                    splitTimes = new ArrayList<>(); // Reset splitTimes
+                    String[] splitTimesData = line.split(" ");
+                    for (int j = 2; j < splitTimesData.length ; j++) { // Loop through each split time, parse, and add to fresh splitTimes array
+                        LocalTime newSplitTime = DateTimeUtil.parseShortStopWatchString(splitTimesData[j].trim());
+                        splitTimes.add(newSplitTime);
+                    }
+                } else if (StringUtils.containsIgnoreCase(line, "Breeder")) {
+
+                } else if (StringUtils.containsIgnoreCase(line, "Winning Owner")) {
+
+                } else if (StringUtils.containsIgnoreCase(line, "Total WPS Pool")) {
+
                 } else {
-                    // Really spammy log
+                        // Really spammy log
 //                    Log.debug("Ignoring line: " + line);
                 }
                 i++;
             }
+
+            horseHashMap.values().forEach(Log::info);
         } catch (IOException e) {
             Log.error("Failed to load PDF document: " + e);
         } catch (Exception e) {
