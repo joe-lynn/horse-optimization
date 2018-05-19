@@ -10,6 +10,14 @@ public class RaceTracks {
 
     static {
         tracks.put("AQE", "Aqueduct");
+        tracks.put("BEL", "Blemont");
+        tracks.put("DC", "Churchill Downs");
+        tracks.put("GP", "Gulfstream Park");
+        tracks.put("MTH", "Monmouth Park");
+        tracks.put("SA", "Santa Anita");
+        tracks.put("WO", "Woodbine");
+        tracks.put("AP", "Arlington Park");
+        tracks.put("SAR", "Saratoga");
     }
 
     public static String getTrackCode(String track) {

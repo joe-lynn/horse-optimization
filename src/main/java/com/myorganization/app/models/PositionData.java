@@ -1,9 +1,14 @@
 package com.myorganization.app.models;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PositionData {
+    private static final Logger Log = LogManager.getLogger("PositionData");
+
     private int startPosition;
     private int quarterPosition;
     private int halfPosition;
@@ -11,27 +16,28 @@ public class PositionData {
     private int threeQuarterPosition;
     private int finishPosition;
 
+    private boolean hasThreeQuarter;
+
     private static final String fiveRegex = "(\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)";
     private static final String fourRegex = "(\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)";
     private static final Pattern fivePattern = Pattern.compile(fiveRegex, Pattern.MULTILINE);
     private static final Pattern fourPattern = Pattern.compile(fourRegex, Pattern.MULTILINE);
 
-    public PositionData(int startPosition, int quarterPosition, int halfPosition, int strPosition, int threeQuarterPosition, int finishPosition) {
+    /**
+     * Constructor used to automatically parse a given string of horse performance data for a single row.
+     * First the rawPositionDataString (ex. "63 51 41/2 3Head", or the 1/4 1/2 Str Fin columns with optional 3/4) is sanitized of common annoying superscripts.
+     * Depending on if there is an optional 5th column, 3/4 or hasThreeQuarter, we will use regex to parse the remaining sanitized string.
+     * @param startPosition - The already parsed, Start column of horse data table
+     * @param rawPositionDataString - The raw OCR string of the more complex horse position data, with superscripts to be removed and positions to be parsed
+     * @param hasThreeQuarter - When true, this horse position data row in the table has 5 columns (the optional 3/4 column), instead of 4
+     */
+    public PositionData(int startPosition, String rawPositionDataString, boolean hasThreeQuarter) {
+        // Store the easy ones
         this.startPosition = startPosition;
-        this.quarterPosition = quarterPosition;
-        this.halfPosition = halfPosition;
-        this.strPosition = strPosition;
-        this.threeQuarterPosition = threeQuarterPosition;
-        this.finishPosition = finishPosition;
-    }
+        this.hasThreeQuarter = hasThreeQuarter;
+        this.threeQuarterPosition = -1;
 
-    public PositionData(String rawPositionDataString, boolean hasThreeQuarter) {
-        // We are looking for 4 single digits
-        // EX: 5 41 1/2 31/2 11/2 15 3/4
-        // EX: 12 12 13 1/2 11 1/4
-        // Remove bunch of common erroneous superscripts
-        System.out.println("Pre: " + rawPositionDataString);
-        String tmp = rawPositionDataString;
+        // Remove a bunch of common erroneous superscripts
         rawPositionDataString = rawPositionDataString.replace("1/2", "");
         rawPositionDataString = rawPositionDataString.replace("Head", "");
         rawPositionDataString = rawPositionDataString.replace("1/4", "");
@@ -41,31 +47,39 @@ public class PositionData {
         rawPositionDataString = rawPositionDataString.replace("Nose", "");
         rawPositionDataString = rawPositionDataString.replace("  ", " ");
         rawPositionDataString = rawPositionDataString.replace("   ", " ");
-        System.out.println("Post: " + rawPositionDataString);
-        System.out.println(hasThreeQuarter);
 
-        // TODO: Make special parsing case or incorporate "---" empty possibility into regex
+        // Important: If horse gets "---" time, we represent that internally with a 0
+        if (rawPositionDataString.contains("---")) {
+            rawPositionDataString = rawPositionDataString.replace("---", "0");
+        }
+
+        if (rawPositionDataString.length() < 7) {
+            Log.error("WHY YOU SO SMALL: " + rawPositionDataString);
+        }
 
         // Some have 3/4 column, and some do, hasThreeQuarter is flag to determine when it does and doesn't
         if (hasThreeQuarter) {
             Matcher matcher = fivePattern.matcher(rawPositionDataString);
             if (matcher.find()) {
                 assert matcher.groupCount() == 5;
-                for (int i = 1; i <= matcher.groupCount(); i++) {
-                    System.out.println(matcher.group(i));
-                }
+                this.quarterPosition = Integer.parseInt(matcher.group(1));
+                this.halfPosition = Integer.parseInt(matcher.group(2));
+                this.strPosition = Integer.parseInt(matcher.group(3));
+                this.threeQuarterPosition = Integer.parseInt(matcher.group(4));
+                this.finishPosition = Integer.parseInt(matcher.group(5));
             } else {
-                System.out.println("Match not found for: " + tmp);
+                Log.error("Match not found for: '" + rawPositionDataString);
             }
         } else {
             Matcher matcher = fourPattern.matcher(rawPositionDataString);
             if (matcher.find()) {
                 assert matcher.groupCount() == 4;
-                for (int i = 1; i <= matcher.groupCount(); i++) {
-                    System.out.println(matcher.group(i));
-                }
+                this.quarterPosition = Integer.parseInt(matcher.group(1));
+                this.halfPosition = Integer.parseInt(matcher.group(2));
+                this.strPosition = Integer.parseInt(matcher.group(3));
+                this.finishPosition = Integer.parseInt(matcher.group(4));
             } else {
-                System.out.println("Match not found for: " + tmp);
+                Log.error("Match not found for: '" + rawPositionDataString);
             }
         }
     }
@@ -92,5 +106,18 @@ public class PositionData {
 
     public int getFinishPosition() {
         return finishPosition;
+    }
+
+    @Override
+    public String toString() {
+        return "PositionData{" +
+                startPosition +
+                " - " + quarterPosition +
+                " - " + halfPosition +
+                " - " + strPosition +
+                " (-) " + threeQuarterPosition +
+                " - " + finishPosition +
+                " - " + hasThreeQuarter +
+                '}';
     }
 }
