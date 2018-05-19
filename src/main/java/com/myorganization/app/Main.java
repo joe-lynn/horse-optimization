@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 
 import com.myorganization.app.models.*;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.apache.pdfbox.pdmodel.PDDocument;
 
@@ -28,7 +29,7 @@ import static java.util.Arrays.asList;
  */
 public final class Main {
 
-    private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) \\d+(\\w{2,3})\\d+)|([-]+)) (\\d) ((?:[a-zA-Z']+\\s){1,3})\\(([a-zA-Z, .]+)\\) (\\d{2,3})\\S?\\s+((?:[L]{1}[ ]?[bf]{1,2})|(?:[L]{1})) (\\d{1}) (\\d{1}) ([0-9\\/A-Za-z ]*) (\\d*\\.?\\d*)\\*? (.+)";
+    private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) \\d+(\\w{2,3})\\d+)|([-]+)) (\\d) ((?:[a-zA-Z']+\\s){1,3})\\(([a-zA-Z, .]+)\\) (\\d{2,3})\\S?\\s+((?:[L]{1}[ ]?[bf]{1,2})|(?:[L]{1})) (\\d{1}) (\\d{1}) ([0-9\\/A-Za-z- ]*) (\\d*\\.?\\d*)\\*? (.+)";
     private static final Pattern pattern = Pattern.compile(dataRegex, Pattern.MULTILINE);
 
     private static final String fractFinalRegex = ": (\\d*\\.?\\d*) (\\d*\\.?\\d*) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) [a-zA-Z :]*((?:[0-9]+:)?[0-9]{2}.[0-9]{2})";
@@ -59,7 +60,7 @@ public final class Main {
             boolean fetchStats = false;
             boolean hasThreeQuarter = false;
 
-            ArrayList<Matcher> dataMatcherList = new ArrayList<>();
+            ArrayList<ImmutablePair<String, Matcher>> dataMatcherList = new ArrayList<>();
 
             LocalTime fractTime1 = null;
             LocalTime fractTime2 = null;
@@ -88,7 +89,8 @@ public final class Main {
 //                    System.out.println(raceNum);
                 } else if (trackCode != null && StringUtils.containsIgnoreCase(line, RaceTracks.getTrack(trackCode))) { // Determine new page from Track Name
                     // Finished processing page, create and save RaceEntry from data
-                    for (Matcher dataMatcher : dataMatcherList) {
+                    for (ImmutablePair<String, Matcher> dataMatcherPair : dataMatcherList) {
+                        Matcher dataMatcher = dataMatcherPair.getValue();
                         if (dataMatcher != null && dataMatcher.find()) {
                             String lastHorseRaceDateString = dataMatcher.group(1);
                             String lastHorseRaceTrackString = dataMatcher.group(2);
@@ -104,8 +106,10 @@ public final class Main {
                             double odds = Double.parseDouble(dataMatcher.group(12));
                             String comments = dataMatcher.group(13);
 
+                            System.out.println(dataMatcherPair.getKey());
                             PositionData positionData = new PositionData(rawPositionDataString, hasThreeQuarter);
                             List<LocalTime> fractTimes = asList(fractTime1, fractTime2, fractTime3);
+
 //                        RaceInfo newRaceInfo = new RaceInfo();
 
 //                        RaceEntry newRaceEntry = new RaceEntry(trackCode, raceDate, raceNum, raceInfo, weight, pp, positionData, odds, comments);
@@ -138,7 +142,8 @@ public final class Main {
                      *  12 - The Odds for this Horse in this Race - 0.45
                      *  13 - Comments on race - "ins 1/2-5/16, 4w upper"
                      */
-                    dataMatcherList.add(pattern.matcher(line));
+                    ImmutablePair<String, Matcher> newPair = new ImmutablePair<>(line, pattern.matcher(line));
+                    dataMatcherList.add(newPair);
                 } else if (fetchStats && StringUtils.containsIgnoreCase(line, "Fractional Times")) { // Acts as marker to end of stat data, TODO: Is this always the case?
                     fetchStats = false; // First reset data fetching because table is finished
 

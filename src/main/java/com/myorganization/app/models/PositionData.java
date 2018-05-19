@@ -11,8 +11,8 @@ public class PositionData {
     private int threeQuarterPosition;
     private int finishPosition;
 
-    private static final String fiveRegex = "(\\d)[1-9/a-zA-Z]* (\\d)[1-9/a-zA-Z]* (\\d)[1-9/a-zA-Z]* (\\d)[1-9/a-zA-Z]* (\\d)";
-    private static final String fourRegex = "(\\d)[1-9/a-zA-Z]* (\\d)[1-9/a-zA-Z]* (\\d)[1-9/a-zA-Z]* (\\d)";
+    private static final String fiveRegex = "(\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)";
+    private static final String fourRegex = "(\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)";
     private static final Pattern fivePattern = Pattern.compile(fiveRegex, Pattern.MULTILINE);
     private static final Pattern fourPattern = Pattern.compile(fourRegex, Pattern.MULTILINE);
 
@@ -31,6 +31,7 @@ public class PositionData {
         // EX: 12 12 13 1/2 11 1/4
         // Remove bunch of common erroneous superscripts
         System.out.println("Pre: " + rawPositionDataString);
+        String tmp = rawPositionDataString;
         rawPositionDataString = rawPositionDataString.replace("1/2", "");
         rawPositionDataString = rawPositionDataString.replace("Head", "");
         rawPositionDataString = rawPositionDataString.replace("1/4", "");
@@ -39,29 +40,32 @@ public class PositionData {
         rawPositionDataString = rawPositionDataString.replace("Neck", "");
         rawPositionDataString = rawPositionDataString.replace("Nose", "");
         rawPositionDataString = rawPositionDataString.replace("  ", " ");
+        rawPositionDataString = rawPositionDataString.replace("   ", " ");
         System.out.println("Post: " + rawPositionDataString);
         System.out.println(hasThreeQuarter);
 
-
+        // TODO: Make special parsing case or incorporate "---" empty possibility into regex
 
         // Some have 3/4 column, and some do, hasThreeQuarter is flag to determine when it does and doesn't
         if (hasThreeQuarter) {
             Matcher matcher = fivePattern.matcher(rawPositionDataString);
             if (matcher.find()) {
+                assert matcher.groupCount() == 5;
                 for (int i = 1; i <= matcher.groupCount(); i++) {
                     System.out.println(matcher.group(i));
                 }
             } else {
-                System.out.println("Match not found for: " + rawPositionDataString);
+                System.out.println("Match not found for: " + tmp);
             }
         } else {
             Matcher matcher = fourPattern.matcher(rawPositionDataString);
             if (matcher.find()) {
+                assert matcher.groupCount() == 4;
                 for (int i = 1; i <= matcher.groupCount(); i++) {
                     System.out.println(matcher.group(i));
                 }
             } else {
-                System.out.println("Match not found for: " + rawPositionDataString);
+                System.out.println("Match not found for: " + tmp);
             }
         }
     }
