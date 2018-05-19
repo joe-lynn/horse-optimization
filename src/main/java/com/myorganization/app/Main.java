@@ -2,9 +2,14 @@ package com.myorganization.app;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 
 import com.myorganization.app.models.*;
 import jregex.Matcher;
@@ -42,9 +47,12 @@ public final class Main {
     private static final String trackRecordRegex = "([a-zA-Z ]*) Track Record: \\(([a-zA-Z' \\(\\)]+) - ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) - (.+)\\)";
     private static final Pattern trackRecordPattern = new Pattern(trackRecordRegex, Pattern.MULTILINE);
 
+    private static final String colonRegex = ": (.+)";
+    private static final Pattern colonPattern = new Pattern(colonRegex, Pattern.MULTILINE);
+
     public static void main(String[] args) throws IOException {
 
-        try (PDDocument document = PDDocument.load(new File("santina.pdf"))) { // old_test_dcrypt.pdf
+        try (PDDocument document = PDDocument.load(new File("old_test_dcrypt.pdf"))) { // old_test_dcrypt.pdf
             PDFTextStripper tStripper = new PDFTextStripper();
             String pdfFileInText = tStripper.getText(document);
 
@@ -78,6 +86,14 @@ public final class Main {
             TrackRecord trackRecord = null;
 
             int runUp = -1;
+            String winningBreeder = "";
+            String winningOwner = "";
+
+            // Init currency parser
+            NumberFormat numFormat = NumberFormat.getCurrencyInstance(Locale.US);
+            ((DecimalFormat)numFormat).setParseBigDecimal(true);
+
+            BigDecimal totalPool = BigDecimal.ZERO;
 
             for (int lineIndex = 0; lineIndex < lines.length; lineIndex++) { // Parse the PDF line by line
                 String line = lines[lineIndex];
@@ -97,7 +113,7 @@ public final class Main {
                     // TODO: Use track length to determine how many fractional times there should be: https://www.equibase.com/newfan/fractional_times.cfm
                     List<LocalTime> fractTimes = asList(fractTime1, fractTime2, fractTime3);
 
-                    RaceInfo raceInfo = new RaceInfo(weatherCondition, trackCondition, trackRecord, fractTimes, finalTime, splitTimes, runUp, "", "", 0f);
+                    RaceInfo raceInfo = new RaceInfo(weatherCondition, trackCondition, trackRecord, fractTimes, finalTime, splitTimes, runUp, winningBreeder, winningOwner, totalPool);
                     Log.debug(raceInfo);
                     Log.debug(trackRecord);
 
@@ -179,7 +195,8 @@ public final class Main {
                     } else {
                         Log.error("Failed to match table data row: " + line);
                     }
-                } else if (fetchStats && StringUtils.containsIgnoreCase(line, "Fractional Times")) { // Acts as marker to end of stat data, TODO: Is this always the case?
+                } else if (fetchStats && StringUtils.containsIgnoreCase(line, "Fractional Times")) { // TODO: Redo fractional time parsing, does not account for 4th or 5th fractional column
+                    // Acts as marker to end of stat data, TODO: Is this always the case?
                     fetchStats = false; // First reset data fetching because table is finished
 
                     Matcher fractFinalMatcher = fractFinalPattern.matcher(line);
@@ -202,7 +219,7 @@ public final class Main {
                         weatherCondition = TrackWeather.get(weatherMatcher.group(1));
                         trackCondition = TrackTypes.get(weatherMatcher.group(2));
                     }
-                } else if (StringUtils.containsIgnoreCase(line, "Run-Up")) {
+                } else if (StringUtils.containsIgnoreCase(line, "Run-Up")) { // TODO: Add parsing for optional Temporary Rail field on the same line
                     Matcher runUpMatcher = runUpPattern.matcher(line);
                     if (runUpMatcher.find()) {
                         try {
@@ -234,11 +251,30 @@ public final class Main {
                         splitTimes.add(newSplitTime);
                     }
                 } else if (StringUtils.containsIgnoreCase(line, "Breeder")) {
-
+                    Matcher winningBreederMatcher = colonPattern.matcher(line);
+                    if (winningBreederMatcher.find()) {
+                        winningBreeder = winningBreederMatcher.group(1).trim();
+                    } else {
+                        Log.error("Failed to match Winning Breeder for line: " + line);
+                    }
                 } else if (StringUtils.containsIgnoreCase(line, "Winning Owner")) {
-
+                    Matcher winningOwnerMatcher = colonPattern.matcher(line);
+                    if (winningOwnerMatcher.find()) {
+                        winningOwner = winningOwnerMatcher.group(1).trim();
+                    } else {
+                        Log.error("Failed to match Winning Owner for line: " + line);
+                    }
                 } else if (StringUtils.containsIgnoreCase(line, "Total WPS Pool")) {
-
+                    Matcher poolMatcher = colonPattern.matcher(line);
+                    if (poolMatcher.find()) {
+                        try {
+                            totalPool = (BigDecimal) numFormat.parse(poolMatcher.group(1));
+                        } catch (ParseException e) {
+                            Log.error("Failed to parse currency value: " + line + " with error: " + e);
+                        }
+                    } else {
+                        Log.error("Failed to match Total WPS Pool for line: " + line);
+                    }
                 } else {
                         // Really spammy log
 //                    Log.debug("Ignoring line: " + line);

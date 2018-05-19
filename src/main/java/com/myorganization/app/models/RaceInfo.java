@@ -1,7 +1,8 @@
 package com.myorganization.app.models;
 
 import org.joda.time.LocalTime;
-import java.util.ArrayList;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 public class RaceInfo {
@@ -15,11 +16,11 @@ public class RaceInfo {
     private int runUp;
     private String winningBreeder;
     private String winningOwner;
-    private double totalPool;
+    private BigDecimal totalPool;
 
     public RaceInfo(TrackWeather weather, TrackTypes track, TrackRecord trackRecord, List<LocalTime> fractionalTimes,
                     LocalTime finalTime, List<LocalTime> splitTimes, int runUp, String winningBreeder,
-                    String winningOwner, double totalPool) {
+                    String winningOwner, BigDecimal totalPool) {
         this.weather = weather;
         this.track = track;
         this.trackRecord = trackRecord;
@@ -68,7 +69,7 @@ public class RaceInfo {
         return winningOwner;
     }
 
-    public double getTotalPool() {
+    public BigDecimal getTotalPool() {
         return totalPool;
     }
 
