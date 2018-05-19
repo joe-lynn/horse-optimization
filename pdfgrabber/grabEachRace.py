@@ -11,8 +11,8 @@ def main():
     for single_date in date_range(start_date, end_date):
         is_404 = False
         for i in range(1, 15):
-            url = 'http://www.equibase.com/static/chart/pdf/AQU' + single_date.strftime("%m%d%y") + 'CAN' + str(i) +\
-                  '.pdf'
+            url = 'http://www.equibase.com/premium/eqbPDFChartPlus.cfm?RACE=A&BorP=P&TID=' + 'AP' + '&CTRY=' + 'USA' + \
+                  '&DT=' + '05/12/1991' + '&DAY=D&STYLE=EQB'
             file_name = 'woodbine-' + single_date.strftime("%m%d%Y") + '-' + str(i) + '.pdf'
             try:
                 with urllib.request.urlopen(url) as response, open(file_name, 'wb') as out_file:
