@@ -7,9 +7,9 @@ public class Horse {
     private String name;
     private ArrayList<RaceEntry> raceEntries;
 
-    Horse(String name) {
+    public Horse(String name) {
         this.name = name;
-        raceEntries = new ArrayList<>();
+        this.raceEntries = new ArrayList<>();
     }
 
     public String getName() {
@@ -18,5 +18,12 @@ public class Horse {
 
     public boolean addRaceEntry(RaceEntry entry) {
         return this.raceEntries.add(entry);
+    }
+
+    @Override
+    public String toString() {
+        return "Horse{" +
+                "name='" + name + '\'' +
+                '}';
     }
 }
