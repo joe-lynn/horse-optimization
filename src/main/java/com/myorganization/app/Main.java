@@ -8,7 +8,6 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 
 import com.myorganization.app.models.*;
@@ -24,15 +23,13 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.joda.time.LocalDate;
 import org.joda.time.LocalTime;
 
-import static java.util.Arrays.asList;
-
 /**
  * The defined parsing process of Equibase PDFs
  */
 public final class Main {
     private static final Logger Log = LogManager.getLogger("Main");
 
-    private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) \\d+(\\w{2,3})\\d+)|([-]+)) (\\d{1,2}[A]?) ([-a-zA-Z'. ]+)\\(([a-zA-Z, .]+)\\) (\\d{2,3})\\S?\\s+((?:[L]?[ ]?[bf]{1,2})|[L]|[-]) (\\d{1,2}|[-]) (\\d{1,2}) ([-0-9\\/A-Za-z ]*) (\\d*\\.?\\d*)\\*? (.+)";
+    private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) \\d+(\\w{2,3})\\d+)|([-]+)) (\\d{1,2}[Aa]?) ([-a-zA-Z'.\\(\\) ]+)\\(([-a-zA-Z, .]+)\\) (\\d{2,3})\\S?\\s+((?:[L]?[ ]?[bfc]{1,2})|[L]|[-]) (\\d{1,2}|[-]) (\\d{1,2}) ([-0-9\\/A-Za-z ]*) (\\d*\\.?\\d*)\\*? (.+)";
     private static final Pattern pattern = new Pattern(dataRegex, Pattern.MULTILINE);
 
     private static final String oneFractFinalRegex = ": ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) Final Time: ((?:[0-9]+:)?[0-9]{2}.[0-9]{2})";
@@ -64,7 +61,7 @@ public final class Main {
 
     public static void main(String[] args) throws IOException {
 
-        try (PDDocument document = PDDocument.load(new File("old_test_dcrypt.pdf"))) { // old_test_dcrypt.pdf
+        try (PDDocument document = PDDocument.load(new File("turn-of-the-century.pdf"))) { // old_test_dcrypt.pdf
             PDFTextStripper tStripper = new PDFTextStripper();
             String pdfFileInText = tStripper.getText(document);
 

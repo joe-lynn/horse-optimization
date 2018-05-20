@@ -10,11 +10,14 @@ public class TrackLength {
     static {
         tracks.put("Six Furlongs On The Inner track", 3);
         tracks.put("Six Furlongs On The Dirt", 3);
+        tracks.put("Six Furlongs On The Turf", 3);
         tracks.put("Six And One Half Furlongs On The Dirt", 3);
         tracks.put("One Mile On The Dirt", 3);
         tracks.put("One Mile On The Inner track", 3);
         tracks.put("One Mile On The Turf", 4);
         tracks.put("One And One Sixteenth Miles On The Inner track", 4);
+        tracks.put("One And One Sixteenth Miles On The Dirt", 4);
+        tracks.put("One And One Eighth Miles On The Inner turf", 4);
     }
 
     public static int getNumOfFractionalTimes(String trackLength) {
