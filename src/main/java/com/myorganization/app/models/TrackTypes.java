@@ -5,7 +5,7 @@ import java.util.Map;
 
 public enum TrackTypes {
     
-    SLOPPY("Sloppy (Sealed)"), FAST("Fast");
+    SLOPPY("Sloppy (Sealed)"), FAST("Fast"), FIRM("Firm");
 
     private final String abbreviation;
 

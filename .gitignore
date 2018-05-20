@@ -26,7 +26,8 @@ target/
 out/
 tmp/
 
-
+# Log file
+*.log
 
 ### Default GitHub options for Java ###
 *.class
