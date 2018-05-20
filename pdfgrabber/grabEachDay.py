@@ -3,6 +3,9 @@ import urllib.error
 import shutil
 from datetime import timedelta, date
 import pathlib
+import distutils.dir_util
+import os, sys
+
 
 can_tracks = {
     'AJX': 'Ajax Downs',
@@ -234,34 +237,35 @@ def main():
     curr_shortcode = ''
     start_date = date(1991, 1, 1)
     end_date = date(2018, 12, 1)
-    first_run = True
 
     for shortcode, track_name in us_tracks.items():
             print('Starting Track: ' + track_name)
-            if(first_run):
-                first_run = False
-            elif curr_trackname != track_name:
-                del us_tracks[curr_shortcode]
+            if curr_trackname != track_name:
                 print('Making New Directory For: ' + track_name)
                 curr_trackname = track_name
                 curr_shortcode = shortcode
-                pathlib.Path('/racepdfs/' + track_name).mkdir(parents=True, exist_ok=True)
+                os.mkdir('/Users/JDesktop/PycharmProjects/horse-optimization/pdfgrabber/racepdfs/' + curr_trackname +
+                         '/', 0o755)
 
             curr_year = 0
 
             for single_date in date_range(start_date, end_date):
                 year = single_date.strftime("%Y")
                 if curr_year < int(year):
-
-                    print('Making New Directory For: ' + track_name + 'and year: ' + year)
-                    pathlib.Path('/racepdfs/' + track_name + '/' + str(year) + '/').mkdir(parents=True, exist_ok=True)
+                    print('Making New Directory For: ' + track_name + ' and year: ' + year)
+                    os.mkdir('/Users/JDesktop/PycharmProjects/horse-optimization/pdfgrabber/racepdfs/' + curr_trackname
+                             + '/' + str(year) + '/', 0o755)
+                    curr_year = int(year)
 
                 url = 'http://www.equibase.com/premium/eqbPDFChartPlus.cfm?RACE=A&BorP=P&TID=' + shortcode + '&CTRY=' + 'USA' + \
                       '&DT=' + single_date.strftime("%m/%d/%Y") + '&DAY=D&STYLE=EQB'
-
-                file_name = track_name + '/' + year + '/' + track_name + single_date.strftime("%m%d%Y") + '.pdf'
+                hdr = {'User-agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; de; rv:1.9.1.5) Gecko/20091102 Firefox/3'
+                                     '.5.5'}
+                req = urllib.request.Request(url, headers=hdr)
+                file_name = '/Users/JDesktop/PycharmProjects/horse-optimization/pdfgrabber/racepdfs/' + curr_trackname \
+                            + '/' + str(year) + '/' + single_date.strftime("%m%d%y") + '.pdf'
                 try:
-                    with urllib.request.urlopen(url) as response, open(file_name, 'wb') as out_file:
+                    with urllib.request.urlopen(req) as response, open(file_name, 'wb') as out_file:
                         shutil.copyfileobj(response, out_file)
                 except urllib.error.HTTPError as err:
                     if err.code == 404:
