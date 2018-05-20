@@ -35,8 +35,20 @@ public final class Main {
     private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) \\d+(\\w{2,3})\\d+)|([-]+)) (\\d{1,2}[A]?) ([-a-zA-Z'. ]+)\\(([a-zA-Z, .]+)\\) (\\d{2,3})\\S?\\s+((?:[L]?[ ]?[bf]{1,2})|[L]|[-]) (\\d{1,2}|[-]) (\\d{1,2}) ([-0-9\\/A-Za-z ]*) (\\d*\\.?\\d*)\\*? (.+)";
     private static final Pattern pattern = new Pattern(dataRegex, Pattern.MULTILINE);
 
-    private static final String fractFinalRegex = ": (\\d*\\.?\\d*) (\\d*\\.?\\d*) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) [a-zA-Z :]*((?:[0-9]+:)?[0-9]{2}.[0-9]{2})";
-    private static final Pattern fractFinalPattern = new Pattern(fractFinalRegex, Pattern.MULTILINE);
+    private static final String oneFractFinalRegex = ": ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) Final Time: ((?:[0-9]+:)?[0-9]{2}.[0-9]{2})";
+    private static final Pattern oneFractFinalPattern = new Pattern(oneFractFinalRegex, Pattern.MULTILINE);
+
+    private static final String twoFractFinalRegex = ": ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) Final Time: ((?:[0-9]+:)?[0-9]{2}.[0-9]{2})";
+    private static final Pattern twoFractFinalPattern = new Pattern(twoFractFinalRegex, Pattern.MULTILINE);
+
+    private static final String threeFractFinalRegex = ": ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) Final Time: ((?:[0-9]+:)?[0-9]{2}.[0-9]{2})";
+    private static final Pattern threeFractFinalPattern = new Pattern(threeFractFinalRegex, Pattern.MULTILINE);
+
+    private static final String fourFractFinalRegex = ": ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) Final Time: ((?:[0-9]+:)?[0-9]{2}.[0-9]{2})";
+    private static final Pattern fourFractFinalPattern = new Pattern(fourFractFinalRegex, Pattern.MULTILINE);
+
+    private static final String fiveFractFinalRegex = ": ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) Final Time: ((?:[0-9]+:)?[0-9]{2}.[0-9]{2})";
+    private static final Pattern fiveFractFinalPattern = new Pattern(fiveFractFinalRegex, Pattern.MULTILINE);
 
     private static final String weatherRegex = ": ([a-zA-Z]+) \\w+: (.+)";
     private static final Pattern weatherPattern = new Pattern(weatherRegex, Pattern.MULTILINE);
@@ -74,11 +86,13 @@ public final class Main {
 
             HashMap<String, Horse> horseHashMap = new HashMap<>();
 
+            int numOfFractionalTimes = 0;
             LocalTime fractTime1 = null;
             LocalTime fractTime2 = null;
             LocalTime fractTime3 = null;
             LocalTime finalTime = null;
 
+            ArrayList<LocalTime> fractTimes = new ArrayList<>();
             ArrayList<LocalTime> splitTimes = new ArrayList<>();
 
             TrackWeather weatherCondition = null;
@@ -88,6 +102,7 @@ public final class Main {
             int runUp = -1;
             String winningBreeder = "";
             String winningOwner = "";
+            String trackLength = "";
 
             // Init currency parser
             NumberFormat numFormat = NumberFormat.getCurrencyInstance(Locale.US);
@@ -105,13 +120,6 @@ public final class Main {
 
                 } else if ( (trackCode != null && StringUtils.containsIgnoreCase(line, RaceTracks.getTrack(trackCode))) || lineIndex == lines.length - 1 ) { // Determine new page from Track Name
                     // Finished processing page, create and save RaceEntry from data
-
-                    if (fractTime1 == null || fractTime2 == null || fractTime3 == null) {
-                        Log.error("Failed to parse fract times, exiting...");
-                        return;
-                    }
-                    // TODO: Use track length to determine how many fractional times there should be: https://www.equibase.com/newfan/fractional_times.cfm
-                    List<LocalTime> fractTimes = asList(fractTime1, fractTime2, fractTime3);
 
                     RaceInfo raceInfo = new RaceInfo(weatherCondition, trackCondition, trackRecord, fractTimes, finalTime, splitTimes, runUp, winningBreeder, winningOwner, totalPool);
                     Log.debug(raceInfo);
@@ -195,31 +203,49 @@ public final class Main {
                     } else {
                         Log.error("Failed to match table data row: " + line);
                     }
-                } else if (fetchStats && StringUtils.containsIgnoreCase(line, "Fractional Times")) { // TODO: Redo fractional time parsing, does not account for 4th or 5th fractional column
+                } else if (fetchStats && StringUtils.containsIgnoreCase(line, "Fractional Times:")) { // TODO: Redo fractional time parsing, does not account for 4th or 5th fractional column
                     // Acts as marker to end of stat data, TODO: Is this always the case?
                     fetchStats = false; // First reset data fetching because table is finished
 
-                    Matcher fractFinalMatcher = fractFinalPattern.matcher(line);
-                    if (fractFinalMatcher.find()) { // If match
-                        String fractTime1String = fractFinalMatcher.group(1);
-                        String fractTime2String = fractFinalMatcher.group(2);
-                        String fractTime3String = fractFinalMatcher.group(3);
-                        String finalTimeString = fractFinalMatcher.group(4);
+                    fractTimes = new ArrayList<>();
 
-                        fractTime1 = DateTimeUtil.parseStopWatchString(fractTime1String);
-                        fractTime2 = DateTimeUtil.parseStopWatchString(fractTime2String);
-                        fractTime3 = DateTimeUtil.parseStopWatchString(fractTime3String);
+                    Matcher fractFinalMatcher = null;
+                    if (numOfFractionalTimes == 0) {
+                        Log.error("Failed to get numOfFractionalTimes for: " + trackLength);
+                    } else if (numOfFractionalTimes == 1) {
+                        fractFinalMatcher = twoFractFinalPattern.matcher(line);
+                    } else if (numOfFractionalTimes == 2) {
+                        fractFinalMatcher = twoFractFinalPattern.matcher(line);
+                    } else if (numOfFractionalTimes == 3) {
+                        fractFinalMatcher = threeFractFinalPattern.matcher(line);
+                    } else if (numOfFractionalTimes == 4) {
+                        fractFinalMatcher = fourFractFinalPattern.matcher(line);
+                    } else if (numOfFractionalTimes == 5) {
+                        fractFinalMatcher = fiveFractFinalPattern.matcher(line);
+                    }
+
+                    if (fractFinalMatcher != null && fractFinalMatcher.find()) { // If match
+                        for (int j = 1; j <= numOfFractionalTimes; j++) {
+                            LocalTime fractTime = DateTimeUtil.parseStopWatchString(fractFinalMatcher.group(j));
+                            fractTimes.add(fractTime);
+                        }
+
+                        String finalTimeString = fractFinalMatcher.group(numOfFractionalTimes+1);
                         finalTime = DateTimeUtil.parseStopWatchString(finalTimeString);
                     } else {
                         Log.error("Failed to match fractional time for line: " + line);
+                        Log.error(trackLength);
                     }
-                } else if (StringUtils.containsIgnoreCase(line, "weather")) {
+
+                    numOfFractionalTimes = 0;
+                } else if (StringUtils.containsIgnoreCase(line, "Weather:")) {
                     Matcher weatherMatcher = weatherPattern.matcher(line);
                     if (weatherMatcher.find()) {
+                        // If error, add missing TrackWeather or TrackTypes
                         weatherCondition = TrackWeather.get(weatherMatcher.group(1));
                         trackCondition = TrackTypes.get(weatherMatcher.group(2));
                     }
-                } else if (StringUtils.containsIgnoreCase(line, "Run-Up")) { // TODO: Add parsing for optional Temporary Rail field on the same line
+                } else if (StringUtils.containsIgnoreCase(line, "Run-Up:")) { // TODO: Add parsing for optional Temporary Rail field on the same line
                     Matcher runUpMatcher = runUpPattern.matcher(line);
                     if (runUpMatcher.find()) {
                         try {
@@ -230,10 +256,12 @@ public final class Main {
                     } else {
                         Log.error("Failed to match Run-Up for line: " + line);
                     }
-                } else if (StringUtils.containsIgnoreCase(line, "Track Record")) {
+                } else if (StringUtils.containsIgnoreCase(line, "Track Record:")) {
                     Matcher trackRecordMatcher = trackRecordPattern.matcher(line);
                     if (trackRecordMatcher.find()) {
-                        String trackLength = trackRecordMatcher.group(1);
+                        trackLength = trackRecordMatcher.group(1).trim();
+                        // If error here, then add missing TrackLength
+                        numOfFractionalTimes = TrackLength.getNumOfFractionalTimes(trackLength);
                         Horse recordHorse = new Horse(trackRecordMatcher.group(2)); // TODO: How are we internally storing horses? Maybe update later if info available
                         LocalTime recordTime = DateTimeUtil.parseStopWatchString(trackRecordMatcher.group(3));
                         LocalDate recordDate = DateTimeUtil.parseDateString(trackRecordMatcher.group(4));
@@ -243,28 +271,28 @@ public final class Main {
                     } else {
                         Log.error("Failed to match Track Record/Length for line: " + line);
                     }
-                } else if (StringUtils.containsIgnoreCase(line, "Split Times")) {
+                } else if (StringUtils.containsIgnoreCase(line, "Split Times:")) {
                     splitTimes = new ArrayList<>(); // Reset splitTimes
                     String[] splitTimesData = line.split(" ");
                     for (int j = 2; j < splitTimesData.length ; j++) { // Loop through each split time, parse, and add to fresh splitTimes array
                         LocalTime newSplitTime = DateTimeUtil.parseShortStopWatchString(splitTimesData[j].trim());
                         splitTimes.add(newSplitTime);
                     }
-                } else if (StringUtils.containsIgnoreCase(line, "Breeder")) {
+                } else if (StringUtils.containsIgnoreCase(line, "Breeder:")) {
                     Matcher winningBreederMatcher = colonPattern.matcher(line);
                     if (winningBreederMatcher.find()) {
                         winningBreeder = winningBreederMatcher.group(1).trim();
                     } else {
                         Log.error("Failed to match Winning Breeder for line: " + line);
                     }
-                } else if (StringUtils.containsIgnoreCase(line, "Winning Owner")) {
+                } else if (StringUtils.containsIgnoreCase(line, "Winning Owner:")) {
                     Matcher winningOwnerMatcher = colonPattern.matcher(line);
                     if (winningOwnerMatcher.find()) {
                         winningOwner = winningOwnerMatcher.group(1).trim();
                     } else {
                         Log.error("Failed to match Winning Owner for line: " + line);
                     }
-                } else if (StringUtils.containsIgnoreCase(line, "Total WPS Pool")) {
+                } else if (StringUtils.containsIgnoreCase(line, "Total WPS Pool:")) {
                     Matcher poolMatcher = colonPattern.matcher(line);
                     if (poolMatcher.find()) {
                         try {
@@ -290,6 +318,6 @@ public final class Main {
             e.printStackTrace();
         }
 
-        Log.debug("Finished Successfully?");
+        Log.info("Finished Successfully");
     }
 }
