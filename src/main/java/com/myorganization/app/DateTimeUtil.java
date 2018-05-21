@@ -11,7 +11,8 @@ public class DateTimeUtil {
     private static DateTimeFormatter threePartTimeFormatter = DateTimeFormat.forPattern("mm:ss.SS");
     private static DateTimeFormatter twoPartTimeFormatter = DateTimeFormat.forPattern("ss.SS");
 
-    private static DateTimeFormatter shortPartTimeFormatter = DateTimeFormat.forPattern("ss:SS");
+    private static DateTimeFormatter threeColonPartTimeFormatter = DateTimeFormat.forPattern("mm.ss:SS");
+    private static DateTimeFormatter twoColonPartTimeFormatter = DateTimeFormat.forPattern("ss:SS");
 
     /**
      * Used to cover both cases of Fractional Times where minutes exists, and when they don't.
@@ -34,8 +35,12 @@ public class DateTimeUtil {
      * @return Parsed LocalTime version of the raw string parameter, timeString
      */
     public static LocalTime parseShortStopWatchString(String timeString) {
-        timeString = timeString.replace("(", "").replace(")", "");
-        return LocalTime.parse(timeString, shortPartTimeFormatter);
+        timeString = timeString.trim().replace("(", "").replace(")", "");
+        if (timeString.length() > 5) {
+            return LocalTime.parse(timeString, threeColonPartTimeFormatter);
+        } else {
+            return LocalTime.parse(timeString, twoColonPartTimeFormatter);
+        }
     }
 
     private static DateTimeFormatter dateFormatter = DateTimeFormat.forPattern("MMMM d, yyyy");
