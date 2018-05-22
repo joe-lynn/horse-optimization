@@ -18,8 +18,8 @@ public class PositionData {
 
     private boolean hasThreeQuarter;
 
-    private static final String fiveRegex = "(\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)";
-    private static final String fourRegex = "(\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)";
+    private static final String fiveRegex = "(\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)";
+    private static final String fourRegex = "(\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)";
     private static final Pattern fivePattern = Pattern.compile(fiveRegex, Pattern.MULTILINE);
     private static final Pattern fourPattern = Pattern.compile(fourRegex, Pattern.MULTILINE);
 
@@ -39,10 +39,10 @@ public class PositionData {
 
         // Remove a bunch of common erroneous superscripts
         rawPositionDataString = rawPositionDataString.replace("1/2", "");
-        rawPositionDataString = rawPositionDataString.replace("Head", "");
         rawPositionDataString = rawPositionDataString.replace("1/4", "");
         rawPositionDataString = rawPositionDataString.replace("2/4", "");
         rawPositionDataString = rawPositionDataString.replace("3/4", "");
+        rawPositionDataString = rawPositionDataString.replace("Head", "");
         rawPositionDataString = rawPositionDataString.replace("Neck", "");
         rawPositionDataString = rawPositionDataString.replace("Nose", "");
         rawPositionDataString = rawPositionDataString.replace("  ", " ");
