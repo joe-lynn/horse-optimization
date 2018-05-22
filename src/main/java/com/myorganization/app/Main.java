@@ -1,7 +1,6 @@
 package com.myorganization.app;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,7 +31,7 @@ import org.joda.time.LocalTime;
  * The defined parsing process of Equibase PDFs
  */
 public final class Main {
-    private static final Logger Log = LogManager.getLogger("Main");
+    private static Logger Log;
 
     private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) [0-9~]{0,3}(\\w{2,3})[0-9~]{0,3})|([-]+)) (\\d{1,2}[A-Za-z]{0,3}) ([-a-zA-Z'.\\(\\) ]+)\\(([-a-zA-Z,' .]+)\\) (\\d{2,3})[~]?\\S? ([LBb]?[a-zA-Z ]{1,5}|[- ]+) (\\d{1,2}|[-]) (\\d{1,2}|[-]+) ([-0-9\\/HeadNckos~ ]*) (?:(\\d*\\.?\\d*)\\*?|(.*)) (.+)";
     private static final Pattern pattern = new Pattern(dataRegex, Pattern.MULTILINE);
@@ -50,6 +49,11 @@ public final class Main {
     private static final Pattern colonPattern = new Pattern(colonRegex, Pattern.MULTILINE);
 
     public static void main(String[] args) throws IOException {
+        // Suppress PDFBox No Unicode warnings
+        java.util.logging.Logger.getLogger("org.apache.pdfbox")
+                .setLevel(java.util.logging.Level.SEVERE);
+
+        Log = LogManager.getLogger("Main");
         HashMap<String, Horse> horseHashMap = new HashMap<>();
 
         List<File> filesInFolder = Files.walk(Paths.get(args[0]))
@@ -65,6 +69,37 @@ public final class Main {
         }
 
         Log.info("Finished Successfully");
+    }
+
+    public static void writeHashMapToFile(String filePath, HashMap<String, Horse> horseHashMap) {
+        // Used for writing horses in HashMap to file
+        try {
+            FileWriter fileWriter = new FileWriter(filePath);
+            PrintWriter printWriter = new PrintWriter(fileWriter);
+
+            for (Horse horse : horseHashMap.values()) {
+                printWriter.println(horse);
+            }
+
+            printWriter.close();
+            Log.info("Done writing horseHash.txt");
+        } catch (IOException e) {
+            Log.error("Failed to write horseHash.txt: " + e.getMessage());
+        }
+    }
+
+    public static void writeSerializedHashMap(String filePath, HashMap<String, Horse> horseHashMap) {
+        // Serializing hashmap
+        try {
+            FileOutputStream fileOut = new FileOutputStream(filePath);
+            ObjectOutputStream out = new ObjectOutputStream(fileOut);
+            out.writeObject(horseHashMap);
+            out.close();
+            fileOut.close();
+            Log.info("Serialized data is saved in " + filePath);
+        } catch (IOException i) {
+            Log.error("Failed to write serialized HashMap: " + i.getMessage());
+        }
     }
 
     public static void parse(File file, HashMap<String, Horse> horseHashMap) {
