@@ -33,20 +33,22 @@ import org.joda.time.LocalTime;
 public final class Main {
     private static Logger Log;
 
-    private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) [0-9~]{0,3}(\\w{2,3})[0-9~]{0,3})|([-]+)) (\\d{1,2}[A-Za-z]{0,3}) ([-a-zA-Z'.\\(\\) ]+)\\(([-a-zA-Z,' .]+)\\) (\\d{2,3})[~]?\\S? ([LBb]?[a-zA-Z ]{1,5}|[- ]+) (\\d{1,2}|[-]) (\\d{1,2}|[-]+) ([-0-9\\/HeadNckos~ ]*) (?:(\\d*\\.?\\d*)\\*?|(.*)) (.+)";
+    private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) [0-9~]{0,3}(\\w{2,3})[0-9~]{0,3})|([-]+)) (\\d{1,3}[A-Za-z]{0,3}) ([-a-zA-Z'.\\(\\) ]+)\\(([-a-zA-Z,' .]+)\\) (\\d{2,3})[~]?\\S? ([LBb]?[a-zA-Z ]{1,5}|[- ]+) (\\d{1,2}|[-]) (\\d{1,2}|[-]+) ([-0-9\\/HeadNckos~ ]*) (?:(\\d*\\.?\\d*)\\*?)?(.+)";
     private static final Pattern pattern = new Pattern(dataRegex, Pattern.MULTILINE);
 
-    private static final String weatherRegex = ": ([a-zA-Z]+) \\w+: (.+)";
+    private static final String weatherRegex = ": ?([a-zA-Z]+|) \\w+: ?(.+|)";
     private static final Pattern weatherPattern = new Pattern(weatherRegex, Pattern.MULTILINE);
 
     private static final String runUpRegex = ": (\\d+)";
     private static final Pattern runUpPattern = new Pattern(runUpRegex, Pattern.MULTILINE);
 
-    private static final String trackRecordRegex = "Track Record: \\(([a-zA-Z' \\(\\)]+) - ((?:[0-9]+:)?[0-9]{2}.[0-9]{2}) - (.+)\\)";
+    private static final String trackRecordRegex = "Track Record: \\(([a-zA-Z' \\(\\)]+) - ?(?:((?:[0-9]+:)?[0-9]{2}.[0-9]{2})|) - (.+)\\)";
     private static final Pattern trackRecordPattern = new Pattern(trackRecordRegex, Pattern.MULTILINE);
 
     private static final String colonRegex = ": (.+)";
     private static final Pattern colonPattern = new Pattern(colonRegex, Pattern.MULTILINE);
+
+    private static final int PDF_MINIMUM_SIZE_BYTES = 4000;
 
     public static void main(String[] args) throws IOException {
         // Suppress PDFBox No Unicode warnings
@@ -54,6 +56,7 @@ public final class Main {
                 .setLevel(java.util.logging.Level.SEVERE);
 
         Log = LogManager.getLogger("Main");
+
         HashMap<String, Horse> horseHashMap = new HashMap<>();
 
         List<File> filesInFolder = Files.walk(Paths.get(args[0]))
@@ -61,14 +64,20 @@ public final class Main {
                 .map(Path::toFile)
                 .collect(Collectors.toList());
 
+        int fileParseCount = 0;
         for (File file : filesInFolder) {
-            if (file.getName().contains("decrypted")) { // Make sure file is decrypted
-                Log.info(file.getName());
+            if (file.length() >= PDF_MINIMUM_SIZE_BYTES && file.getName().contains("decrypted")) { // Make sure file is not corrupt and decrypted
+                if (fileParseCount == 0) {
+                    Log.info("Starting parser!");
+                } else if (fileParseCount % 1000 == 0) {
+                    Log.info("Parsed " + fileParseCount + " pdfs");
+                }
                 parse(file, horseHashMap);
+                fileParseCount++;
             }
         }
 
-        Log.info("Finished Successfully");
+        Log.info("Finished parsing " + fileParseCount + " pdfs!");
     }
 
     public static void writeHashMapToFile(String filePath, HashMap<String, Horse> horseHashMap) {
@@ -103,22 +112,17 @@ public final class Main {
     }
 
     public static void parse(File file, HashMap<String, Horse> horseHashMap) {
-
-        /**
-         * if (document.isEncrypted()) {
-         try {
-         document.decrypt("");
-         } catch (InvalidPasswordException e) {
-         System.err.println("Error: Document is encrypted with a password.");
-         System.exit(1);
-         }
-         }
-         */
         try (PDDocument document = PDDocument.load(file)) {
+
+            // Remove all PDF security!
+//            document.setAllSecurityToBeRemoved(true);
+
+
+            // Create instance of our custom PDF Text Stripper to parse document
             PDFTextStripper tStripper = new SuperscriptPDFTextStripper();
             String pdfFileInText = tStripper.getText(document);
 
-            // split by whitespace
+            // split by line
             String lines[] = pdfFileInText.split("\\r?\\n");
             int page = 0;
             int i = 0;
@@ -163,6 +167,8 @@ public final class Main {
                     Matcher finalMatcher = colonPattern.matcher(line);
                     if (finalMatcher.find()) {
                         finalTime = DateTimeUtil.parseStopWatchString(finalMatcher.group(1));
+                    } else {
+                        Log.error("Failed to handle special case of no Fractional Time for line: " + line);
                     }
                 }
 
@@ -204,16 +210,15 @@ public final class Main {
                             String rawPositionDataString = dataMatcher.group(11);
                             String oddsString = dataMatcher.group(12);
                             double odds = -1;
-                            String customOdds = dataMatcher.group(13);
-                            String comments = dataMatcher.group(14);
-                            if (customOdds != null) { // TODO: Handle declared odds case
-                                Log.warn("TODO IMPLEMENT ODDS HANDLING in racenum: " + raceNum + " with horse: " + horseName + " custom odds: " + customOdds + " " + comments + "\nline: " + dataObject.getLine());
-                                String rebuildFailedOdds = customOdds + " " + comments;
-                                if (rebuildFailedOdds.contains("--")) {
+                            String comments = dataMatcher.group(13);
+                            if (oddsString == null || oddsString.length() == 0) { // TODO: Handle declared odds case
+                                String failedOdds = comments.trim();
+                                Log.warn("Detected non-existent odds but instead: " + failedOdds + " on line: " + dataObject.getLine());
+                                if (failedOdds.contains("--")) { // TODO: Does this still occur with new regex?
                                     Log.warn("Detected empty Finishing Position, attempting to fix for line: " + dataObject.getLine());
                                     rawPositionDataString += " 0";
                                 }
-                                comments = "";
+                                comments = failedOdds; // Make whatever is left after non-existent odds the comments for this entry
                             } else {
                                 try {
                                     odds = Double.parseDouble(oddsString);
@@ -303,12 +308,23 @@ public final class Main {
                     } else {
                         finalTime = DateTimeUtil.parseStopWatchString(finalTimeString);
                     }
-                } else if (StringUtils.containsIgnoreCase(line, "Weather:")) {
+                } else if (StringUtils.containsIgnoreCase(line, "Weather:") && StringUtils.containsIgnoreCase(line, "Track:")) {
                     Matcher weatherMatcher = weatherPattern.matcher(line);
                     if (weatherMatcher.find()) {
-                        // If error, add missing TrackWeather or TrackTypes
-                        weatherCondition = TrackWeather.get(weatherMatcher.group(1));
-                        trackCondition = TrackTypes.get(weatherMatcher.group(2));
+                        String weather = weatherMatcher.group(1);
+                        String track = weatherMatcher.group(2);
+                        if (weather.length() == 0) {
+                            weatherCondition = null;
+                        } else {
+                            weatherCondition = TrackWeather.get(weather);
+                        }
+                        if (track.length() == 0) {
+                            trackCondition = null;
+                        } else {
+                            trackCondition = TrackTypes.get(track);
+                        }
+                    } else {
+                        Log.error("Failed to match weather for line: " + line);
                     }
                 } else if (StringUtils.containsIgnoreCase(line, "Run-Up:")) { // TODO: Add parsing for optional Temporary Rail field on the same line
                     Matcher runUpMatcher = runUpPattern.matcher(line);
