@@ -12,7 +12,8 @@ public enum TrackTypes {
     FAST("Fast"), FAST_SEALED("Fast (Sealed)"), FIRM("Firm"), FIRM_SEALED("Firm (Sealed)"),
     YIELDING("Yielding"), YIELDING_SEALED("Yielding (Sealed)"), GOOD("Good"), GOOD_SEALED("Good (Sealed)"),
     SOFT("Soft"), SOFT_SEALED("Soft (Sealed)"), WET_FAST("Wet Fast"), WEST_FAST_SEALED("Wet Fast (Sealed)"),
-    SLOW("Slow"), SLOW_SEALED("Slow (Sealed)");
+    SLOW("Slow"), SLOW_SEALED("Slow (Sealed)"), FROZEN("Frozen"), FROZEN_SEALED("Frozen (Sealed)"),
+    HARD("Hard"), HARD_SEALED("Hard (Sealed)"), HEAVY("Heavy"), HEAVY_SEALED("HEAVY (Sealed)");
 
     private static final Logger Log = LogManager.getLogger("TrackTypes");
 

@@ -11,11 +11,11 @@ import org.joda.time.format.DateTimeFormatter;
 public class DateTimeUtil {
     private static final Logger Log = LogManager.getLogger("DateTimeUtil");
 
-    private static DateTimeFormatter threePartTimeFormatter = DateTimeFormat.forPattern("mm:ss.SS");
-    private static DateTimeFormatter twoPartTimeFormatter = DateTimeFormat.forPattern("ss.SS");
+    private static DateTimeFormatter threePartTimeFormatter = DateTimeFormat.forPattern("mm:ss.SSSS");
+    private static DateTimeFormatter twoPartTimeFormatter = DateTimeFormat.forPattern("ss.SSSS");
 
-    private static DateTimeFormatter threeColonPartTimeFormatter = DateTimeFormat.forPattern("mm.ss:SS");
-    private static DateTimeFormatter twoColonPartTimeFormatter = DateTimeFormat.forPattern("ss:SS");
+    private static DateTimeFormatter threeColonPartTimeFormatter = DateTimeFormat.forPattern("mm.ss:SSSS");
+    private static DateTimeFormatter twoColonPartTimeFormatter = DateTimeFormat.forPattern("ss:SSSS");
 
     /**
      * Used to cover both cases of Fractional Times where minutes exists, and when they don't.
@@ -25,9 +25,20 @@ public class DateTimeUtil {
      * @return A correctly parsed LocalTime version of the string parameter given
      */
     public static LocalTime parseStopWatchString(String timeString) {
-        if (timeString.length() > 5) {
+        if (timeString.contains(":")) {
             return LocalTime.parse(timeString, threePartTimeFormatter);
         } else {
+            // Handle retarded over 60 case (ex: 75.52)
+            try {
+                String[] parts = StringUtils.split(timeString, ".");
+                int seconds = Integer.parseInt(parts[0]);
+                if ( seconds > 60 ) {
+                    timeString = String.valueOf(seconds - 60) + "." + parts[1]; // No way this works properly
+                }
+            } catch (ArrayIndexOutOfBoundsException e) {
+                Log.error("Failed to detect/fix special 'over 60' case for string: " + timeString);
+            }
+
             return LocalTime.parse(timeString, twoPartTimeFormatter);
         }
     }
@@ -38,8 +49,8 @@ public class DateTimeUtil {
      * @return Parsed LocalTime version of the raw string parameter, timeString
      */
     public static LocalTime parseShortStopWatchString(String timeString) {
-        timeString = timeString.trim().replace("(", "").replace(")", "");
-        if (timeString.length() > 5) {
+        timeString = timeString.trim().replace("(", "").replace(")", ""); // TODO: Test if not needed anymore?
+        if (timeString.contains(".")) {
             return LocalTime.parse(timeString, threeColonPartTimeFormatter);
         } else {
             return LocalTime.parse(timeString, twoColonPartTimeFormatter);

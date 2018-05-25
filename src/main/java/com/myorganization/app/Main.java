@@ -33,7 +33,7 @@ import org.joda.time.LocalTime;
 public final class Main {
     private static Logger Log;
 
-    private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) [0-9~]{0,3}(\\w{2,3})[0-9~]{0,3})|([-]+)) (\\d{1,3}[A-Za-z]{0,3}) ([-a-zA-Z'.\\(\\) ]+)\\(([-a-zA-Z,' .]+)\\) (\\d{2,3})[~]?\\S? ([LBb]?[a-zA-Z ]{1,5}|[- ]+) (\\d{1,2}|[-]) (\\d{1,2}|[-]+) ([-0-9\\/HeadNckos~ ]*) (?:(\\d*\\.?\\d*)\\*?)?(.+)";
+    private static final String dataRegex = "(?:(?:(\\d{1,2}\\w{3}\\d{2}) [0-9~]{0,3}(\\w{2,3})[0-9~]{0,3})|([-]+)) (\\d{1,3}[A-Za-z]{0,3}|[-]+) ([-a-zA-Z'.\\(\\) ]+)\\(([-a-zA-Z,' .]+)\\) (\\d{2,3})[~]?\\S? ([LBb]?[a-zA-Z ]{1,5}|[- ]+) (\\d{1,2}|[-]) (\\d{1,2}|[-]+) ([-0-9\\/HeadNckos~ ]*) (?:(\\d*\\.?\\d*)\\*?)?(.+)";
     private static final Pattern pattern = new Pattern(dataRegex, Pattern.MULTILINE);
 
     private static final String weatherRegex = ": ?([a-zA-Z]+|) \\w+: ?(.+|)";
@@ -42,18 +42,21 @@ public final class Main {
     private static final String runUpRegex = ": (\\d+)";
     private static final Pattern runUpPattern = new Pattern(runUpRegex, Pattern.MULTILINE);
 
-    private static final String trackRecordRegex = "Track Record: \\(([a-zA-Z' \\(\\)]+) - ?(?:((?:[0-9]+:)?[0-9]{2}.[0-9]{2})|) - (.+)\\)";
+    private static final String trackRecordRegex = "Track Record: \\(([a-zA-Z'. \\(\\)]+) - ?(?:((?:[0-9]+:)?[0-9]{2}.[0-9]{2,3})|) - (.+)\\)";
     private static final Pattern trackRecordPattern = new Pattern(trackRecordRegex, Pattern.MULTILINE);
 
     private static final String colonRegex = ": (.+)";
     private static final Pattern colonPattern = new Pattern(colonRegex, Pattern.MULTILINE);
+
+    private static final String splitTimeRegex = "\\(([0-9.:]{4,8})\\)";
+    private static final Pattern splitTimePattern = new Pattern(splitTimeRegex, Pattern.MULTILINE);
 
     private static final int PDF_MINIMUM_SIZE_BYTES = 4000;
 
     public static void main(String[] args) throws IOException {
         // Suppress PDFBox No Unicode warnings
         java.util.logging.Logger.getLogger("org.apache.pdfbox")
-                .setLevel(java.util.logging.Level.SEVERE);
+                .setLevel(java.util.logging.Level.OFF);
 
         Log = LogManager.getLogger("Main");
 
@@ -113,11 +116,6 @@ public final class Main {
 
     public static void parse(File file, HashMap<String, Horse> horseHashMap) {
         try (PDDocument document = PDDocument.load(file)) {
-
-            // Remove all PDF security!
-//            document.setAllSecurityToBeRemoved(true);
-
-
             // Create instance of our custom PDF Text Stripper to parse document
             PDFTextStripper tStripper = new SuperscriptPDFTextStripper();
             String pdfFileInText = tStripper.getText(document);
@@ -126,6 +124,8 @@ public final class Main {
             String lines[] = pdfFileInText.split("\\r?\\n");
             int page = 0;
             int i = 0;
+
+            // TODO: ENSURE ALL VARIABLES ARE SET TO NULL IF NOT FOUND, OR ELSE THE REUSE OF VARIABLES WILL GIVE INCORRECT DATA (the previous data point)
 
             String trackCode = null;
             LocalDate raceDate = null;
@@ -160,15 +160,23 @@ public final class Main {
             for (int lineIndex = 0; lineIndex < lines.length; lineIndex++) { // Parse the PDF line by line
                 String line = lines[lineIndex];
 
-                // Handle special case: See Race 5 of 102791
+                // Handle special case for excluded Fractional Times section in Fractional/Final line after table
                 if (fetchStats && StringUtils.containsIgnoreCase(line, "Final Time:") && !StringUtils.containsIgnoreCase(line, "Fractional")) {
-                    fetchStats = false;
+                    fetchStats = false; // Make sure to turn of table data row fetching
 
-                    Matcher finalMatcher = colonPattern.matcher(line);
-                    if (finalMatcher.find()) {
-                        finalTime = DateTimeUtil.parseStopWatchString(finalMatcher.group(1));
+                    if (line.length() <= "Final Time: ".length()) { // Make sure Final Time isn't empty
+                        finalTime = null;
                     } else {
-                        Log.error("Failed to handle special case of no Fractional Time for line: " + line);
+                        if (line.contains("N/A")) {
+                            finalTime = null;
+                        } else { // Hopefully some real fucking digits
+                            Matcher finalMatcher = colonPattern.matcher(line);
+                            if (finalMatcher.find()) {
+                                finalTime = DateTimeUtil.parseStopWatchString(finalMatcher.group(1));
+                            } else {
+                                Log.error("Failed to handle special case of no Fractional Time for line: " + line);
+                            }
+                        }
                     }
                 }
 
@@ -178,7 +186,7 @@ public final class Main {
                     raceDate = DateTimeUtil.parseDateString(data[1]);
                     raceNum = Integer.parseInt(data[2].split(" ")[1]);
 
-                } else if ((trackCode != null && StringUtils.containsIgnoreCase(line, RaceTracks.getTrack(trackCode)) && StringUtils.countMatches(line, "-") == 2) || lineIndex == lines.length - 1) { // Determine new page from Track Name
+                } else if ((trackCode != null && StringUtils.startsWithIgnoreCase(line.trim(), RaceTracks.getTrack(trackCode)) && StringUtils.countMatches(line, " - ") == 2) || lineIndex == lines.length - 1) { // Determine new page from Track Name
                     // Finished processing page, create and save RaceEntry from data
 
                     RaceInfo raceInfo = new RaceInfo(weatherCondition, trackCondition, trackRecord, fractTimes, finalTime, splitTimes, runUp, winningBreeder, winningOwner, totalPool);
@@ -194,7 +202,10 @@ public final class Main {
                             String lastHorseRaceTrackString = dataMatcher.group(2);
                             String neverRacedFlag = dataMatcher.group(3);
 
-                            String pgm = dataMatcher.group(4);
+                            String pgm = null;
+                            if (!dataMatcher.group(4).contains("-")) {
+                                pgm = dataMatcher.group(4);
+                            }
                             String horseName = dataMatcher.group(5).trim();
                             String jockeyName = dataMatcher.group(6);
                             int weight = Integer.parseInt(dataMatcher.group(7));
@@ -229,11 +240,9 @@ public final class Main {
                                 }
                             }
 
-                            Log.debug("Line: " + dataObject.getLine());
                             PositionData positionData = new PositionData(startPosition, rawPositionDataString, dataObject.isThreeQuarter());
 
                             RaceEntry newRaceEntry = new RaceEntry(trackCode, raceDate, pgm, jockeyName, raceNum, raceInfo, weight, me, pp, positionData, odds, comments);
-                            Log.debug(newRaceEntry);
 
                             if (horseHashMap.containsKey(horseName)) { // If we already created this Horse
                                 horseHashMap.get(horseName).addRaceEntry(newRaceEntry);
@@ -251,7 +260,7 @@ public final class Main {
                     page++; // Increment the page, internal tracking of current page incremented each time we see "track name - date - race number"
                     if (lineIndex != lines.length - 1) {
                         String[] data = line.split(" - ");
-                        raceNum = Integer.parseInt(data[2].split(" ")[1]);
+                        raceNum = Integer.parseInt(data[2].split(" ")[1]); // TODO: Rework, not matching beginning of page anymore
                     }
                 } else if (stringSimilarity.apply(line, "Last Raced Pgm Horse Name (Jockey) Wgt M/E PP Start 1/4 1/2 3/4 Str Fin Odds Comments") < 5) { // Margin for parsing error is 5 character difference than defined string
                     fetchStats = true;
@@ -282,8 +291,8 @@ public final class Main {
                     } else {
                         Log.error("Failed to match table data row: " + line);
                     }
-                } else if (fetchStats && StringUtils.containsIgnoreCase(line, "Fractional Times:")) { // TODO: Redo fractional time parsing, does not account for 4th or 5th fractional column
-                    // Acts as marker to end of stat data, TODO: Is this always the case?
+                } else if (fetchStats && StringUtils.containsIgnoreCase(line, "Fractional Times:")) {
+                    // Acts as marker to end of stat data, TODO: Is this always the case? so far yes except for special case handled above
                     fetchStats = false; // First reset data fetching because table is finished
 
                     fractTimes = new ArrayList<>();
@@ -337,12 +346,16 @@ public final class Main {
                     } else {
                         Log.error("Failed to match Run-Up for line: " + line);
                     }
-                } else if (StringUtils.containsIgnoreCase(line, "Track Record:")) {
+                } else if (StringUtils.containsIgnoreCase(line, "Track Record: (")) {
                     Matcher trackRecordMatcher = trackRecordPattern.matcher(line);
                     if (trackRecordMatcher.find()) {
                         // If error here, then add missing
-                        Horse recordHorse = new Horse(trackRecordMatcher.group(1)); // TODO: How are we internally storing horses? Maybe update later if info available
-                        LocalTime recordTime = DateTimeUtil.parseStopWatchString(trackRecordMatcher.group(2));
+                        Horse recordHorse = new Horse(trackRecordMatcher.group(1));
+                        String recordTimeString = trackRecordMatcher.group(2);
+                        LocalTime recordTime = null;
+                        if (recordTimeString != null) {
+                            recordTime = DateTimeUtil.parseStopWatchString(recordTimeString);
+                        }
                         LocalDate recordDate = DateTimeUtil.parseDateString(trackRecordMatcher.group(3));
 
                         trackRecord = new TrackRecord(recordHorse, recordTime, recordDate);
@@ -352,7 +365,7 @@ public final class Main {
                         trackRecordMatcher = trackRecordPattern.matcher(modifiedLine);
                         if (trackRecordMatcher.find()) {
                             // If error here, then add missing
-                            Horse recordHorse = new Horse(trackRecordMatcher.group(1)); // TODO: How are we internally storing horses? Maybe update later if info available
+                            Horse recordHorse = new Horse(trackRecordMatcher.group(1));
                             LocalTime recordTime = DateTimeUtil.parseStopWatchString(trackRecordMatcher.group(2));
                             LocalDate recordDate = DateTimeUtil.parseDateString(trackRecordMatcher.group(3));
 
@@ -364,29 +377,42 @@ public final class Main {
                         Log.error("Failed to match Track Record/Length for line: " + line);
                     }
                 } else if (StringUtils.containsIgnoreCase(line, "Split Times:")) {
+                    // Handling of special cases lead us back to regex instead of splitting by space
+                    // ex. (1.00:27)(31:13) (30:56) (30:51)
+                    // ex. (1.17:51)(25:28) (27:67) (26:60)
+                    // ex. (51:90) (1.00:97)(54:22)
                     splitTimes = new ArrayList<>(); // Reset splitTimes
-                    String[] splitTimesData = line.split(" ");
-                    for (int j = 2; j < splitTimesData.length; j++) { // Loop through each split time, parse, and add to fresh splitTimes array
+                    String splitTimeString = line.replace("-.", ""); // Strip "-." to handle special case (ex: "(24:39) (25:67) (-.33:88) (1.01:74)" )
+                    Matcher splitTimeMatcher = splitTimePattern.matcher(splitTimeString);
+                    while(splitTimeMatcher.find()) { // Loop through each separate match
                         try {
-                            LocalTime newSplitTime = DateTimeUtil.parseShortStopWatchString(splitTimesData[j]);
+                            LocalTime newSplitTime = DateTimeUtil.parseShortStopWatchString(splitTimeMatcher.toString());
                             splitTimes.add(newSplitTime);
                         } catch (IllegalArgumentException e) {
                             Log.error("Failed to parse SplitTime on line: " + line);
                         }
                     }
                 } else if (StringUtils.containsIgnoreCase(line, "Breeder:")) {
-                    Matcher winningBreederMatcher = colonPattern.matcher(line);
-                    if (winningBreederMatcher.find()) {
-                        winningBreeder = winningBreederMatcher.group(1).trim();
-                    } else {
-                        Log.error("Failed to match Winning Breeder for line: " + line);
+                    if (line.length() <= "Breeder: ".length()) { // Handle empty breeder case
+                        winningBreeder = null;
+                    } else { // Breeder not empty, so try regex
+                        Matcher winningBreederMatcher = colonPattern.matcher(line);
+                        if (winningBreederMatcher.find()) {
+                            winningBreeder = winningBreederMatcher.group(1).trim();
+                        } else {
+                            Log.error("Failed to match Winning Breeder for line: " + line);
+                        }
                     }
                 } else if (StringUtils.containsIgnoreCase(line, "Winning Owner:")) {
-                    Matcher winningOwnerMatcher = colonPattern.matcher(line);
-                    if (winningOwnerMatcher.find()) {
-                        winningOwner = winningOwnerMatcher.group(1).trim();
-                    } else {
-                        Log.error("Failed to match Winning Owner for line: " + line);
+                    if (line.length() <= "Winning Owner: ".length()) { // Handle empty breeder case
+                        winningOwner = null;
+                    } else { // Owner not empty, so try regex
+                        Matcher winningOwnerMatcher = colonPattern.matcher(line);
+                        if (winningOwnerMatcher.find()) {
+                            winningOwner = winningOwnerMatcher.group(1).trim();
+                        } else {
+                            Log.error("Failed to match Winning Owner for line: " + line);
+                        }
                     }
                 } else if (StringUtils.containsIgnoreCase(line, "Total WPS Pool:")) {
                     Matcher poolMatcher = colonPattern.matcher(line);
@@ -399,8 +425,6 @@ public final class Main {
                     } else {
                         Log.error("Failed to match Total WPS Pool for line: " + line);
                     }
-                } else if ((trackCode != null && StringUtils.containsIgnoreCase(line, RaceTracks.getTrack(trackCode))) || lineIndex == lines.length - 1) {
-                    Log.warn("DID WE MISS THE BEGINNING OF A PAGE with new dash counting filter?: " + line);
                 } else {
                     // Really spammy log
 //                    Log.debug("Ignoring line: " + line);
@@ -408,9 +432,9 @@ public final class Main {
                 i++;
             }
         } catch (IOException e) {
-            Log.error("Failed to load PDF document: " + e);
+            Log.error("Failed to load PDF document: " + file.getName());
         } catch (Exception e) {
-            Log.error("Failed to parse Document: " + e);
+            Log.error("Failed to parse Document: " + file.getName());
             e.printStackTrace();
         }
     }
