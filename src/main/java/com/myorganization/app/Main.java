@@ -56,7 +56,7 @@ public final class Main {
     public static void main(String[] args) throws IOException {
         // Suppress PDFBox No Unicode warnings
         java.util.logging.Logger.getLogger("org.apache.pdfbox")
-                .setLevel(java.util.logging.Level.OFF);
+                .setLevel(java.util.logging.Level.SEVERE);
 
         Log = LogManager.getLogger("Main");
 
@@ -69,6 +69,17 @@ public final class Main {
 
         int fileParseCount = 0;
         for (File file : filesInFolder) {
+            if (file.getAbsolutePath().contains("1991") || file.getAbsolutePath().contains("1992") ||
+                    file.getAbsolutePath().contains("1993") || file.getAbsolutePath().contains("1994") ||
+                    file.getAbsolutePath().contains("1995") || file.getAbsolutePath().contains("1996") ||
+                    file.getAbsolutePath().contains("1997") || file.getAbsolutePath().contains("1998") ||
+                    file.getAbsolutePath().contains("1999") || file.getAbsolutePath().contains("2000") ||
+                    file.getAbsolutePath().contains("2001") || file.getAbsolutePath().contains("2002") ||
+                    file.getAbsolutePath().contains("2003") || file.getAbsolutePath().contains("2004") ||
+                    file.getAbsolutePath().contains("2005") || file.getAbsolutePath().contains("2006") ||
+                    file.getAbsolutePath().contains("2007") || file.getAbsolutePath().contains("2008") ) {
+                continue;
+            }
             if (file.length() >= PDF_MINIMUM_SIZE_BYTES && file.getName().contains("decrypted")) { // Make sure file is not corrupt and decrypted
                 if (fileParseCount == 0) {
                     Log.info("Starting parser!");
@@ -79,6 +90,8 @@ public final class Main {
                 fileParseCount++;
             }
         }
+
+        Log.info(horseHashMap);
 
         Log.info("Finished parsing " + fileParseCount + " pdfs!");
     }
@@ -221,9 +234,9 @@ public final class Main {
                             String rawPositionDataString = dataMatcher.group(11);
                             String oddsString = dataMatcher.group(12);
                             double odds = -1;
-                            String comments = dataMatcher.group(13);
+                            String comments = dataMatcher.group(13).trim();
                             if (oddsString == null || oddsString.length() == 0) { // TODO: Handle declared odds case
-                                String failedOdds = comments.trim();
+                                String failedOdds = comments; // TODO: Remove legacy variable
                                 Log.warn("Detected non-existent odds but instead: " + failedOdds + " on line: " + dataObject.getLine());
                                 if (failedOdds.contains("--")) { // TODO: Does this still occur with new regex?
                                     Log.warn("Detected empty Finishing Position, attempting to fix for line: " + dataObject.getLine());
@@ -262,8 +275,13 @@ public final class Main {
                         String[] data = line.split(" - ");
                         raceNum = Integer.parseInt(data[2].split(" ")[1]); // TODO: Rework, not matching beginning of page anymore
                     }
-                } else if (stringSimilarity.apply(line, "Last Raced Pgm Horse Name (Jockey) Wgt M/E PP Start 1/4 1/2 3/4 Str Fin Odds Comments") < 5) { // Margin for parsing error is 5 character difference than defined string
+                } else if (StringUtils.startsWithIgnoreCase(line, "Last Raced Pgm Horse Name (Jockey) Wgt")) { // Margin for parsing error is 5 character difference than defined string
+                    // TODO: Need to create system to dynamically match the header labels to position data, ex. https://i.imgur.com/Qcx5Fcc.png vs normie header
+                    // TODO: Ignore all really short races??? https://i.imgur.com/ebQYViw.png
                     fetchStats = true;
+
+                    if (!line.contains(" Odds")) Log.error("FAILED ODDS CHECK: " + line);
+
                     hasThreeQuarter = line.contains("3/4");
                 } else if (fetchStats && ( !line.contains("Fractional Times") || !line.contains("Final Time:") )) { // The first data table header has been reached, so we start getting RaceEntries
                     /** Parsing Guide
