@@ -18,10 +18,12 @@ public class PositionData {
 
     private boolean hasThreeQuarter;
 
-    private static final String fiveRegex = "(\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)";
-    private static final String fourRegex = "(\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)[0-9/a-zA-Z]* (\\d)";
+    private static final String fiveRegex = "(\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)";
+    private static final String fourRegex = "(\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)";
+    private static final String threeRegex = "(\\d+)[0-9a-zA-Z~]* (\\d+)[0-9a-zA-Z~]* (\\d+)";
     private static final Pattern fivePattern = Pattern.compile(fiveRegex, Pattern.MULTILINE);
     private static final Pattern fourPattern = Pattern.compile(fourRegex, Pattern.MULTILINE);
+    private static final Pattern threePattern = Pattern.compile(threeRegex, Pattern.MULTILINE);
 
     /**
      * Constructor used to automatically parse a given string of horse performance data for a single row.
@@ -35,14 +37,21 @@ public class PositionData {
         // Store the easy ones
         this.startPosition = startPosition;
         this.hasThreeQuarter = hasThreeQuarter;
-        this.threeQuarterPosition = -1;
+        this.threeQuarterPosition = 0;
+
+        // Init the harder ones
+        this.quarterPosition = 0;
+        this.halfPosition = 0;
+        this.strPosition = 0;
+        this.threeQuarterPosition = 0;
+        this.finishPosition = 0;
 
         // Remove a bunch of common erroneous superscripts
         rawPositionDataString = rawPositionDataString.replace("1/2", "");
-        rawPositionDataString = rawPositionDataString.replace("Head", "");
         rawPositionDataString = rawPositionDataString.replace("1/4", "");
         rawPositionDataString = rawPositionDataString.replace("2/4", "");
         rawPositionDataString = rawPositionDataString.replace("3/4", "");
+        rawPositionDataString = rawPositionDataString.replace("Head", "");
         rawPositionDataString = rawPositionDataString.replace("Neck", "");
         rawPositionDataString = rawPositionDataString.replace("Nose", "");
         rawPositionDataString = rawPositionDataString.replace("  ", " ");
@@ -68,7 +77,7 @@ public class PositionData {
                 this.threeQuarterPosition = Integer.parseInt(matcher.group(4));
                 this.finishPosition = Integer.parseInt(matcher.group(5));
             } else {
-                Log.error("Match not found for: '" + rawPositionDataString);
+                Log.error("Match not found for: '" + rawPositionDataString + "'");
             }
         } else {
             Matcher matcher = fourPattern.matcher(rawPositionDataString);
@@ -79,7 +88,7 @@ public class PositionData {
                 this.strPosition = Integer.parseInt(matcher.group(3));
                 this.finishPosition = Integer.parseInt(matcher.group(4));
             } else {
-                Log.error("Match not found for: '" + rawPositionDataString);
+                Log.error("Match not found for: '" + rawPositionDataString + "'");
             }
         }
     }

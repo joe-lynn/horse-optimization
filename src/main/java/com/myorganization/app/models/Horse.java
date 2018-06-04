@@ -1,11 +1,12 @@
 package com.myorganization.app.models;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Horse {
+public class Horse implements Serializable{
 
     private String name;
-    private ArrayList<RaceEntry> raceEntries;
+    private transient ArrayList<RaceEntry> raceEntries;
 
     public Horse(String name) {
         this.name = name;

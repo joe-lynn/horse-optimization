@@ -6,7 +6,7 @@ import org.joda.time.LocalTime;
 public class TrackRecord {
 
     private Horse horse;
-    private LocalTime record;
+    private LocalTime record; // CAN BE NULL
     private LocalDate date;
 
     public TrackRecord(Horse horse, LocalTime time, LocalDate date) {
