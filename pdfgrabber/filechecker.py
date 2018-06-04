@@ -1,9 +1,5 @@
-import urllib.request
-import urllib.error
-import shutil
 from datetime import timedelta, date
 import os
-
 
 can_tracks = {
     'AJX': 'Ajax Downs',
@@ -193,7 +189,6 @@ chunk3 = {
 }
 
 chunk4 = {
-    'SFE': 'Santa Fe',
     'RKM': 'Rockingham Park',
     'RUI': 'Ruidoso Downs',
     'RUP': 'Rupert Downs',
@@ -203,6 +198,7 @@ chunk4 = {
     'SDY': 'Sandy Downs',
     'SA': 'Santa Anita Park',
     'SON': 'Santa Cruz County Fair @ Sonoita',
+    'SFE': 'Santa Fe',
     'SR': 'Santa Rosa',
     'SHW': 'Shawan Downs',
     'SOL': 'Solano',
@@ -241,69 +237,27 @@ chunk4 = {
 
 current_chunk = chunk4
 country_code = 'USA'
-racepdfs_location = 'C:/Users/JDesktop/Desktop/PDFSFINAL6.2.18/chunk4/'
+racepdfs_location = 'C:/Users/JDesktop/Desktop/PDFSFINAL6.2.18/chunk4'
 
 
 def main():
-
-    curr_trackname = ''
     start_date = date(1991, 1, 1)
     end_date = date(2018, 5, 20)
-
     for shortcode, track_name in current_chunk.items():
-        print('Starting Track: ' + track_name)
-        if curr_trackname != track_name:
-            curr_trackname = track_name
-            if(not os.path.exists(racepdfs_location +
-                                  curr_trackname + '/')):
-                print('Making New Directory For: ' + track_name)
-                os.mkdir(racepdfs_location + curr_trackname
-                         + '/', 0o755)
-
-        curr_year = 0
 
         for single_date in date_range(start_date, end_date):
             year = single_date.strftime("%Y")
-            if curr_year < int(year):
-                if(not os.path.exists(racepdfs_location +
-                                      curr_trackname + '/' + str(year) + '/')):
-                    print('Making New Directory For: ' + track_name + ' and year: ' + year)
-                    os.mkdir(racepdfs_location +
-                             curr_trackname + '/' + str(year) + '/', 0o755)
-                curr_year = int(year)
-
-            url = 'http://www.equibase.com/premium/eqbPDFChartPlus.cfm?RACE=A&BorP=P&TID=' + shortcode + '&CTRY=' +\
-                  country_code + '&DT=' + single_date.strftime("%m/%d/%Y") + '&DAY=D&STYLE=EQB'
-            hdr = {'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chro'
-                                 'me/66.0.3359.181 Safari/537.36',
-                   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-                   'Accept-Encoding': 'gzip, deflate',
-                   'Accept-Language': 'en-US,en;q=0.9',
-                   'Connection': 'keep-alive',
-                   'DNT': '1',
-                   'Host': 'www.equibase.com',
-                   'Upgrade-Insecure-Requests': '1',
-                   'Cookie': 'hasLiveRampMatch=true; dt=Sun Jun 03 2018; EQBHOME=2; _ga=GA1.2.1405624710.1525628357; __qca=P0-601022164-1525628358120; __gads=ID=6aefe9a7c278b1fb:T=1525628362:S=ALNI_MazBZt4GM1-A7BDiIiC04AiOeejLg; clickandchat.com=855-1525628377653; __sonar=9148314863431239511; D_SID=98.10.201.79:NcnZqG2bv6xFPms/SWenPL2zQZcGJT4to7xMSkKpivU; __unam=802c0e5-163478e0a9f-67384ed6-2; OX_plg=pm; COOKIE_TEST=TEST; __utma=118826909.792118245.1526837255.1526837255.1526837255.1; __utmc=118826909; __utmz=118826909.1526837255.1.1.utmccn=(direct)|utmcsr=(direct)|utmcmd=(none); hasLiveRampMatch=true; _gid=GA1.2.2133650322.1527975522; dt=Sat Jun 02 2018; SAP=0206182354TN; D_IID=BD6911C7-1DCB-3E00-80A9-71BEEDD3C119; D_UID=CE8BF1C1-479B-381F-B29B-C4F61A5483F6; D_ZID=0082D931-0301-39C4-A15E-5AA140C83452; D_ZUID=48BC915B-ADF5-346C-ABCA-51C60418FBF0; D_HID=D1D3C3E3-2C18-3DAB-BA6B-3946AD618FCD; dpm_url_count=61; dpm_time_site=57596.912000000055'
-                   }
-            req = urllib.request.Request(url, headers=hdr)
-            file_name = racepdfs_location + curr_trackname \
-                        + '/' + str(year) + '/' + single_date.strftime("%m%d%y") + '.pdf'
-            if not os.path.exists(file_name):
-                try:
-                    with urllib.request.urlopen(req) as response:
-                        with open(file_name, 'wb') as out_file:
-                            shutil.copyfileobj(response, out_file)
-                except urllib.error.HTTPError as err:
-                    if err.code == 404:
-                        print("404")
-                        print('Lost: ' + single_date.strftime("%m/%d/%Y" + ' for track: ' + track_name))
-                    else:
-                        print(err)
-                        print('Lost: ' + single_date.strftime("%m/%d/%Y" + ' for track: ' + track_name))
+            day_formatted = single_date.strftime("%m%d%y")
+            url = racepdfs_location + '/' + track_name + '/' + year + '/' + day_formatted + '.pdf'
+            curr_size = os.path.getsize(url)
+            if curr_size >= 2000 and curr_size <= 3000:
+                print('possible bad - 2  - ' + url)
+            elif curr_size < 600:
+                pass
+                #print('between 2 and 16 = ' + url)
             else:
                 pass
-        print('All days checked for this track!')
-    print('All Tracks have been completed.')
+                #print(curr_size)
 
 
 def date_range(start_date, end_date):
